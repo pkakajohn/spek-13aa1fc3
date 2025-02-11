@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Table,
@@ -13,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Upload } from "lucide-react";
+import * as XLSX from 'xlsx';
 
 interface Record {
   date: string;
@@ -195,17 +195,77 @@ const Index = () => {
     return sortConfig.direction === "asc" ? <ChevronUp className="inline" /> : <ChevronDown className="inline" />;
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const excelData = XLSX.utils.sheet_to_json<Record>(worksheet);
+
+        const updatedRecords = [...records];
+        excelData.forEach((importedRecord) => {
+          const existingIndex = updatedRecords.findIndex(
+            (record) => record.protocol === importedRecord.protocol
+          );
+
+          if (existingIndex !== -1) {
+            updatedRecords[existingIndex] = importedRecord;
+          } else {
+            updatedRecords.push(importedRecord);
+          }
+        });
+
+        setRecords(updatedRecords);
+        toast({
+          title: "Επιτυχία",
+          description: `Εισαγωγή ${excelData.length} εγγραφών με επιτυχία`,
+        });
+      } catch (error) {
+        toast({
+          title: "Σφάλμα",
+          description: "Υπήρξε πρόβλημα κατά την εισαγωγή του αρχείου",
+          variant: "destructive",
+        });
+        console.error('Error importing Excel:', error);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Διαχείριση Εγγραφών</h1>
       
       <div className="flex justify-between items-center mb-4">
-        <Input
-          placeholder="Αναζήτηση..."
-          value={searchTerm}
-          onChange={handleSearch}
-          className="max-w-sm"
-        />
+        <div className="flex gap-4 items-center">
+          <Input
+            placeholder="Αναζήτηση..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="max-w-sm"
+          />
+          <Input
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleFileUpload}
+            className="max-w-sm"
+            id="excel-upload"
+          />
+          <Button
+            onClick={() => document.getElementById('excel-upload')?.click()}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Εισαγωγή Excel
+          </Button>
+        </div>
         
         <Dialog open={isNewRecordDialogOpen} onOpenChange={setIsNewRecordDialogOpen}>
           <DialogTrigger asChild>
@@ -251,7 +311,7 @@ const Index = () => {
                   {key} {renderSortIcon(key as keyof Record)}
                 </TableHead>
               ))}
-              <TableHead>Ενέργειες</TableHead>
+              <TableHead>Ενέργειε��</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
