@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Table,
@@ -32,6 +33,22 @@ interface Record {
 }
 
 const ITEMS_PER_PAGE = 10;
+
+const columnTitles: { [key in keyof Record]: string } = {
+  date: "Ημερομηνία",
+  protocol: "Αριθμός Πρωτοκόλλου",
+  creation: "Τρόπος Δημιουργίας",
+  action: "Πράξη",
+  suggestion: "Εισήγηση",
+  status: "Κατάσταση",
+  registration: "Καταχώριση",
+  office: "Γραφείο",
+  spekStatus: "Κατάσταση ΣΠΕΚ",
+  certificate: "Πιστοποιητικό",
+  preRegistrar: "Προϊστάμενος",
+  manual: "Τόμος",
+  notes: "Σημειώσεις"
+};
 
 const Index = () => {
   const [records, setRecords] = useState<Record[]>([
@@ -278,7 +295,7 @@ const Index = () => {
             <div className="grid grid-cols-2 gap-4">
               {Object.keys(newRecord).map((key) => (
                 <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{key}</Label>
+                  <Label htmlFor={key}>{columnTitles[key as keyof Record]}</Label>
                   <Input
                     id={key}
                     value={newRecord[key as keyof Record]}
@@ -308,10 +325,10 @@ const Index = () => {
                   className="cursor-pointer"
                   onClick={() => handleSort(key as keyof Record)}
                 >
-                  {key} {renderSortIcon(key as keyof Record)}
+                  {columnTitles[key as keyof Record]} {renderSortIcon(key as keyof Record)}
                 </TableHead>
               ))}
-              <TableHead>Ενέργειε��</TableHead>
+              <TableHead>Ενέργειες</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -370,3 +387,4 @@ const Index = () => {
 };
 
 export default Index;
+
