@@ -1,53 +1,29 @@
 
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, Pencil, Upload } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import * as XLSX from 'xlsx';
-
-interface Record {
-  date: string;
-  protocol: string;
-  creation: string;
-  action: string;
-  suggestion: string;
-  status: string;
-  registration: string;
-  office: string;
-  spekStatus: string;
-  certificate: string;
-  preRegistrar: string;
-  manual: string;
-  notes: string;
-}
+import { Record } from "@/types/record";
+import { RecordForm } from "@/components/records/RecordForm";
+import { RecordsTable } from "@/components/records/RecordsTable";
+import { RecordsToolbar } from "@/components/records/RecordsToolbar";
 
 const ITEMS_PER_PAGE = 10;
 
-const columnTitles: { [key in keyof Record]: string } = {
-  date: "Ημερομηνία",
-  protocol: "Αριθμός Πρωτοκόλλου",
-  creation: "Τρόπος Δημιουργίας",
-  action: "Πράξη",
-  suggestion: "Εισήγηση",
-  status: "Κατάσταση",
-  registration: "Καταχώριση",
-  office: "Γραφείο",
-  spekStatus: "Κατάσταση ΣΠΕΚ",
-  certificate: "Πιστοποιητικό",
-  preRegistrar: "Προϊστάμενος",
-  manual: "Τόμος",
-  notes: "Σημειώσεις"
+const emptyRecord: Record = {
+  date: "",
+  protocol: "",
+  creation: "",
+  action: "",
+  suggestion: "",
+  status: "",
+  registration: "",
+  office: "",
+  spekStatus: "",
+  certificate: "",
+  preRegistrar: "",
+  manual: "",
+  notes: "",
 };
 
 const Index = () => {
@@ -77,21 +53,7 @@ const Index = () => {
   }>({ key: null, direction: null });
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
   const [isNewRecordDialogOpen, setIsNewRecordDialogOpen] = useState(false);
-  const [newRecord, setNewRecord] = useState<Record>({
-    date: "",
-    protocol: "",
-    creation: "",
-    action: "",
-    suggestion: "",
-    status: "",
-    registration: "",
-    office: "",
-    spekStatus: "",
-    certificate: "",
-    preRegistrar: "",
-    manual: "",
-    notes: "",
-  });
+  const [newRecord, setNewRecord] = useState<Record>({ ...emptyRecord });
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -140,21 +102,7 @@ const Index = () => {
 
   const handleAddRecord = () => {
     setRecords([...records, newRecord]);
-    setNewRecord({
-      date: "",
-      protocol: "",
-      creation: "",
-      action: "",
-      suggestion: "",
-      status: "",
-      registration: "",
-      office: "",
-      spekStatus: "",
-      certificate: "",
-      preRegistrar: "",
-      manual: "",
-      notes: "",
-    });
+    setNewRecord({ ...emptyRecord });
     setIsNewRecordDialogOpen(false);
     toast({
       title: "Επιτυχία",
@@ -171,21 +119,7 @@ const Index = () => {
     
     setRecords(updatedRecords);
     setEditingRecord(null);
-    setNewRecord({
-      date: "",
-      protocol: "",
-      creation: "",
-      action: "",
-      suggestion: "",
-      status: "",
-      registration: "",
-      office: "",
-      spekStatus: "",
-      certificate: "",
-      preRegistrar: "",
-      manual: "",
-      notes: "",
-    });
+    setNewRecord({ ...emptyRecord });
     
     toast({
       title: "Επιτυχία",
@@ -205,11 +139,7 @@ const Index = () => {
   const handleEditClick = (record: Record) => {
     setEditingRecord(record);
     setNewRecord(record);
-  };
-
-  const renderSortIcon = (key: keyof Record) => {
-    if (sortConfig.key !== key) return null;
-    return sortConfig.direction === "asc" ? <ChevronUp className="inline" /> : <ChevronDown className="inline" />;
+    setIsNewRecordDialogOpen(true);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,106 +189,39 @@ const Index = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Διαχείριση Εγγραφών</h1>
       
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-4 items-center">
-          <Input
-            placeholder="Αναζήτηση..."
-            value={searchTerm}
-            onChange={handleSearch}
-            className="max-w-sm"
+      <RecordsToolbar
+        searchTerm={searchTerm}
+        onSearchChange={handleSearch}
+        onImportClick={() => document.getElementById('excel-upload')?.click()}
+        onNewRecordClick={() => {
+          setEditingRecord(null);
+          setNewRecord({ ...emptyRecord });
+          setIsNewRecordDialogOpen(true);
+        }}
+      />
+      
+      <Dialog open={isNewRecordDialogOpen} onOpenChange={setIsNewRecordDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{editingRecord ? "Επεξεργασία Εγγραφής" : "Νέα Εγγραφή"}</DialogTitle>
+          </DialogHeader>
+          <RecordForm
+            record={newRecord}
+            onSubmit={editingRecord ? handleUpdateRecord : handleAddRecord}
+            onChange={(key, value) => setNewRecord({ ...newRecord, [key]: value })}
+            mode={editingRecord ? "edit" : "create"}
           />
-          <Input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileUpload}
-            className="max-w-sm"
-            id="excel-upload"
-          />
-          <Button
-            onClick={() => document.getElementById('excel-upload')?.click()}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Εισαγωγή Excel
-          </Button>
-        </div>
-        
-        <Dialog open={isNewRecordDialogOpen} onOpenChange={setIsNewRecordDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>Νέα Εγγραφή</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>{editingRecord ? "Επεξεργασία Εγγραφής" : "Νέα Εγγραφή"}</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4">
-              {Object.keys(newRecord).map((key) => (
-                <div key={key} className="space-y-2">
-                  <Label htmlFor={key}>{columnTitles[key as keyof Record]}</Label>
-                  <Input
-                    id={key}
-                    value={newRecord[key as keyof Record]}
-                    onChange={(e) =>
-                      setNewRecord({ ...newRecord, [key]: e.target.value })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button onClick={editingRecord ? handleUpdateRecord : handleAddRecord}>
-                {editingRecord ? "Ενημέρωση" : "Προσθήκη"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {Object.keys(newRecord).map((key) => (
-                <TableHead 
-                  key={key}
-                  className="cursor-pointer"
-                  onClick={() => handleSort(key as keyof Record)}
-                >
-                  {columnTitles[key as keyof Record]} {renderSortIcon(key as keyof Record)}
-                </TableHead>
-              ))}
-              <TableHead>Ενέργειες</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedRecords.map((record, index) => (
-              <TableRow key={index}>
-                {Object.values(record).map((value, i) => (
-                  <TableCell key={i}>{value}</TableCell>
-                ))}
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditClick(record)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleDeleteRecord(index)}
-                      size="sm"
-                    >
-                      Διαγραφή
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <RecordsTable
+          records={paginatedRecords}
+          onSort={handleSort}
+          sortConfig={sortConfig}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteRecord}
+        />
       </div>
 
       {totalPages > 1 && (
